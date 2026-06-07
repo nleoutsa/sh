@@ -75,8 +75,9 @@ _exit_code() {
 }
 
 # Context color for user@host (computed once -- doesn't change within a session):
-#   green local non-root   magenta root   red SSH (+[client-ip])   yellow [docker]
-_ctx_color='32' _ctx_prefix=''
+#   pastel purple (256-color 183) local non-root; magenta root; red SSH
+#   (+[client-ip]); yellow [docker]
+_ctx_color='38;5;183' _ctx_prefix=''
 if [ -n "$SSH_CONNECTION" ]; then
   _ctx_color='31'
   _ctx_prefix="\[\e[33m\][${SSH_CONNECTION%% *}]\[\e[0m\] "

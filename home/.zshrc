@@ -109,10 +109,11 @@ _git_prompt() {
 }
 
 # Context color for user@host (computed once -- doesn't change within a session):
-#   green   local non-root        magenta  root
+#   183     local non-root (pastel purple, distinct from the green clean-git)
+#   magenta root
 #   red     SSH session, prefixed with [client-ip]
 #   yellow  [docker] / [chroot] prefix
-_ctx_color=green; _ctx_prefix=''
+_ctx_color=183; _ctx_prefix=''
 if [[ -n $SSH_CONNECTION ]]; then
   _ctx_color=red
   _ctx_prefix="%F{yellow}[${SSH_CONNECTION%% *}]%f "
