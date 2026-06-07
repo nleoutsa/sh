@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# lsp -- add or remove the optional Vim LSP layer with a single command.
+#
+#   lsp on        install vim-lsp + asyncomplete + vim-lsp-settings and wire
+#                 in the config (clones into Vim's native package dir)
+#   lsp off       remove everything the layer touches (one rm of 3 paths)
+#   lsp status    report whether the layer is installed
+#
+# Everything the layer touches lives in exactly three predictable paths, so
+# teardown is total and trivial:
+#     ~/.vim/pack/lsp/                 the plugins (Vim native packages)
+#     ~/.vim/lsp.vim                   the config (symlink into this repo)
+#     ~/.local/share/vim-lsp-settings  language servers it auto-installs
+set -eu
+
+PACKDIR="${HOME}/.vim/pack/lsp/start"
+CONFLINK="${HOME}/.vim/lsp.vim"
+SERVERDIR="${HOME}/.local/share/vim-lsp-settings"
+
+# Plugins (pure VimScript; work on any Vim 8+ with +job/+channel, no +python3/+lua).
+REPOS="
+https://github.com/prabirshrestha/vim-lsp
+https://github.com/prabirshrestha/asyncomplete.vim
+https://github.com/prabirshrestha/asyncomplete-lsp.vim
+https://github.com/mattn/vim-lsp-settings
+"
+
+# --- locate this repo (to link vim/lsp.vim), resolving symlinks --------------
+src="${BASH_SOURCE[0]:-$0}"
+while [ -h "$src" ]; do
+  d="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+  src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$d/$src" ;; esac
+done
+BINDIR="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+REPO="$(cd "$BINDIR/.." >/dev/null 2>&1 && pwd)"
+LSPVIM="${REPO}/vim/lsp.vim"
+
+is_on() { [ -d "$PACKDIR/vim-lsp" ]; }
+
+cmd_on() {
+  command -v git >/dev/null 2>&1 || { echo "lsp: git is required" >&2; exit 1; }
+  mkdir -p "$PACKDIR"
+  for url in $REPOS; do
+    name="$(basename "$url")"
+    if [ -d "$PACKDIR/$name" ]; then
+      echo "  = $name already present"
+    else
+      echo "  + cloning $name"
+      git clone --depth 1 -q "$url" "$PACKDIR/$name"
+    fi
+  done
+  ln -sf "$LSPVIM" "$CONFLINK"
+  echo
+  echo "LSP layer installed.  Restart Vim, then install servers per language:"
+  echo "    :LspInstallServer            (run inside a file of that type)"
+  echo "  typescript/js : typescript-language-server   (needs node on PATH)"
+  echo "  python        : pyright  (or pylsp)"
+  echo "  c / c++       : clangd   ($(command -v clangd >/dev/null 2>&1 && echo 'already on PATH' || echo 'install via your package manager'))"
+  echo
+  echo "Check health with :LspStatus.   Remove everything with:  lsp off"
+}
+
+cmd_off() {
+  rm -rf "${HOME}/.vim/pack/lsp" "$CONFLINK" "$SERVERDIR"
+  echo "LSP layer removed (plugins, config link, and downloaded servers)."
+  echo "Base Vim is untouched and stays plugin-free."
+}
+
+cmd_status() {
+  if is_on; then
+    echo "LSP layer: ON"
+    echo "  plugins : $PACKDIR"
+    for name in vim-lsp asyncomplete.vim asyncomplete-lsp.vim vim-lsp-settings; do
+      [ -d "$PACKDIR/$name" ] && echo "      - $name"
+    done
+    if [ -d "$SERVERDIR" ]; then
+      echo "  servers : $SERVERDIR"
+      ls -1 "$SERVERDIR" 2>/dev/null | sed 's/^/      - /'
+    else
+      echo "  servers : none installed yet (run :LspInstallServer in Vim)"
+    fi
+  else
+    echo "LSP layer: OFF  (base Vim is plugin-free)"
+  fi
+}
+
+case "${1:-}" in
+  on)     cmd_on ;;
+  off)    cmd_off ;;
+  status) cmd_status ;;
+  *)      echo "usage: lsp {on|off|status}" >&2; exit 2 ;;
+esac

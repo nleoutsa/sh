@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# cheat -- quick command lookup from the dotfiles cheatsheet.
+#
+#   cheat              fuzzy-browse the whole cheatsheet (fzf) or page it
+#   cheat <term>       fuzzy-filter / grep for <term>
+#
+# Uses fzf when available; falls back to grep + $PAGER on bare machines.
+
+# --- locate the cheatsheet ----------------------------------------------------
+sheet="${DOTFILES_CHEATSHEET:-}"
+if [ -z "${sheet}" ] || [ ! -r "${sheet}" ]; then
+  # Resolve relative to this script (handles being symlinked).
+  src="${BASH_SOURCE[0]:-$0}"
+  while [ -h "$src" ]; do
+    d="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+    src="$(readlink "$src")"
+    case "$src" in /*) ;; *) src="$d/$src" ;; esac
+  done
+  d="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+  sheet="$d/../shell/cheatsheet.md"
+fi
+[ -r "$sheet" ] || sheet="$HOME/.vim/cheatsheet.md"
+if [ ! -r "$sheet" ]; then
+  echo "cheat: cheatsheet not found (set \$DOTFILES_CHEATSHEET)" >&2
+  exit 1
+fi
+
+# --- internal: render the whole sheet for fzf's preview, reverse-highlighting
+#     every line that matches ALL whitespace-separated query tokens (case-
+#     insensitive substring).  Called by fzf via `cheat --render-preview {q}`,
+#     which keeps the awk out of fzf's nested-quoting hell.  Printing the FULL
+#     sheet keeps NR == file line, so fzf's +{1} centering stays aligned.
+if [ "${1:-}" = "--render-preview" ]; then
+  shift
+  awk -v q="$*" '
+    BEGIN { n = split(q, t, /[ \t]+/) }
+    {
+      hi = (q != "")
+      for (i = 1; i <= n; i++)
+        if (t[i] != "" && index(tolower($0), tolower(t[i])) == 0) { hi = 0; break }
+      if (hi) printf "\033[7m%s\033[0m\n", $0
+      else    print
+    }
+  ' "$sheet"
+  exit 0
+fi
+
+query="$*"
+
+if command -v fzf >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
+  # Interactive terminal + fzf.  Number the lines (grep -n) so the preview can
+  # show the full sheet and scroll to the selection; hide the number from the
+  # list with --with-nth and strip it from the final selection.
+  #
+  # Preview sits ABOVE the results (--preview-window up) so the list keeps full
+  # width on narrow terminals, highlights every line matching the live query
+  # ({q}), and auto-scrolls to centre the selected line ({1}, via +{1}-/2).
+  self="$(command -v cheat 2>/dev/null)"; [ -n "$self" ] || self="$0"
+  grep -n -vE '^[[:space:]]*$' "$sheet" \
+    | fzf --query="$query" --delimiter=: --with-nth=2.. \
+          --layout=reverse \
+          --preview "'$self' --render-preview {q}" \
+          --preview-window='up,60%,wrap,+{1}-/2' \
+          --prompt='cheat> ' \
+    | sed 's/^[0-9]\{1,\}://'
+else
+  if [ -n "$query" ]; then
+    grep -i -- "$query" "$sheet" | ${PAGER:-less}
+  else
+    ${PAGER:-less} "$sheet"
+  fi
+fi

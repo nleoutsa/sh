@@ -1,0 +1,10 @@
+# Install-time state (machine-local, never committed)
+.dotfiles-manifest
+*.predotfiles.bak
+
+# Editor / OS noise
+*.swp
+*.swo
+*~
+.DS_Store
+tags

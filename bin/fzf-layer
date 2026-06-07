@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# fzf-layer -- add or remove a self-contained fzf install with a single command.
+#
+#   fzf-layer on        clone + build fzf under ~/.fzf and generate the shell
+#                       integration files (~/.fzf.bash, ~/.fzf.zsh)
+#   fzf-layer off       remove everything it touches (one rm of 3 paths)
+#   fzf-layer status    report whether it's installed
+#
+# Named 'fzf-layer', not 'fzf', so it never shadows the real fzf binary on PATH.
+# Everything lives under predictable paths, so teardown is total:
+#     ~/.fzf/        the repo + downloaded binary
+#     ~/.fzf.bash    bash key-bindings + completion (sourced by ~/.bashrc if present)
+#     ~/.fzf.zsh     zsh  key-bindings + completion (sourced by ~/.zshrc  if present)
+set -eu
+
+FZFDIR="${HOME}/.fzf"
+
+cmd_on() {
+  command -v git >/dev/null 2>&1 || { echo "fzf-layer: git is required" >&2; exit 1; }
+  if command -v fzf >/dev/null 2>&1 && [ ! -d "$FZFDIR" ]; then
+    echo "note: fzf is already on PATH ($(command -v fzf)); installing a managed"
+    echo "      copy under ~/.fzf anyway so 'fzf-layer off' can remove it cleanly."
+  fi
+  if [ ! -d "$FZFDIR" ]; then
+    echo "  + cloning fzf"
+    git clone --depth 1 -q https://github.com/junegunn/fzf.git "$FZFDIR"
+  else
+    echo "  = ~/.fzf already present; updating binary + integration"
+  fi
+  # --bin downloads the prebuilt binary; --key-bindings/--completion write the
+  # ~/.fzf.{bash,zsh} integration files; --no-update-rc keeps our rc files ours.
+  "$FZFDIR/install" --key-bindings --completion --no-update-rc --no-fish >/dev/null
+  echo
+  echo "fzf installed under ~/.fzf.  Open a new shell to pick it up:"
+  echo "  Ctrl-R  fuzzy history    Ctrl-T  fuzzy file    Alt-C  fuzzy cd"
+  echo "  'cheat' will also switch to its fuzzy picker automatically."
+  echo "Remove everything with:  fzf-layer off"
+}
+
+cmd_off() {
+  rm -rf "$FZFDIR" "${HOME}/.fzf.bash" "${HOME}/.fzf.zsh"
+  echo "fzf layer removed (~/.fzf and the integration files)."
+  echo "Shells fall back to builtin history search; 'cheat' falls back to grep/pager."
+}
+
+cmd_status() {
+  if [ -d "$FZFDIR" ]; then
+    echo "fzf layer: ON  (~/.fzf)"
+    [ -x "$FZFDIR/bin/fzf" ] && echo "  version: $("$FZFDIR/bin/fzf" --version 2>/dev/null)"
+  elif command -v fzf >/dev/null 2>&1; then
+    echo "fzf layer: OFF, but fzf is available system-wide ($(command -v fzf))"
+  else
+    echo "fzf layer: OFF  (no fzf on PATH; 'cheat' uses grep/pager)"
+  fi
+}
+
+case "${1:-}" in
+  on)     cmd_on ;;
+  off)    cmd_off ;;
+  status) cmd_status ;;
+  *)      echo "usage: fzf-layer {on|off|status}" >&2; exit 2 ;;
+esac

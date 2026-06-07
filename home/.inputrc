@@ -1,0 +1,44 @@
+# ~/.inputrc -- readline config.  Applies to bash and any program that uses
+# readline (python REPL, psql, etc.).  Unknown directives are ignored by old
+# readline (macOS bash 3.2), so this stays portable.
+
+$include /etc/inputrc
+
+# --- vi editing mode ----------------------------------------------------------
+set editing-mode vi
+set keyseq-timeout 10
+# Show the mode (+/:) in the prompt when readline supports it (>= 7.0; older
+# readline silently ignores this).
+set show-mode-in-prompt on
+
+# --- completion ergonomics ----------------------------------------------------
+set completion-ignore-case on
+set show-all-if-ambiguous on        # one Tab lists matches instead of beeping
+set menu-complete-display-prefix on
+set colored-stats on                # color completion entries by file type
+set mark-symlinked-directories on
+set bell-style none
+
+# --- INSERT-mode key restorations (lost/repurposed under vi mode) -------------
+set keymap vi-insert
+"\C-a": beginning-of-line
+"\C-e": end-of-line
+"\C-r": reverse-search-history
+"\C-p": previous-history
+"\C-n": next-history
+# Up/Down search history by the prefix already typed.
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+# Tab cycles through completions instead of just inserting the common prefix.
+TAB: menu-complete
+"\e[Z": menu-complete-backward      # Shift-Tab goes the other way
+
+# In NORMAL (command) mode, search by typed prefix with the arrow keys too.
+set keymap vi-command
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"k": history-search-backward
+"j": history-search-forward
+
+# Return to the default keymap so nothing below is accidentally vi-command only.
+set keymap vi-insert
