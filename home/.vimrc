@@ -191,6 +191,39 @@ let &directory = s:undodir . '//'   " swap files; // = full path in name
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" CURSOR SHAPE PER MODE
+" The terminal cursor has no distinct colour under many colorschemes, so the
+" current mode is invisible.  Signal it with the cursor *shape* instead, via
+" the DECSCUSR sequence (CSI Ps SP q) that all modern terminals understand:
+"     2 = steady block      -> normal / visual
+"     6 = steady bar        -> insert      (t_SI)
+"     4 = steady underline  -> replace     (t_SR)
+" Use 1/5/3 instead of 2/6/4 for the blinking variants.
+" Guarded to terminal Vim (the GUI draws its own cursor) and wrapped in the
+" tmux/screen passthrough DCS so a multiplexer doesn't swallow the escape.
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+if !has('gui_running')
+  if exists('$TMUX')
+    let &t_SI = "\ePtmux;\e\e[6 q\e\\"
+    let &t_SR = "\ePtmux;\e\e[4 q\e\\"
+    let &t_EI = "\ePtmux;\e\e[2 q\e\\"
+  else
+    let &t_SI = "\e[6 q"
+    let &t_SR = "\e[4 q"
+    let &t_EI = "\e[2 q"
+  endif
+  " Vim emits t_EI only on a mode *transition*, so force a block at startup
+  " (and after :suspend), and restore one on exit so the shell prompt isn't
+  " left with a stray bar/underline cursor.
+  augroup CursorShape
+    autocmd!
+    autocmd VimEnter,VimResume * silent execute "!printf '\e[2 q'" | redraw!
+    autocmd VimLeave           * silent execute "!printf '\e[2 q'"
+  augroup END
+endif
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " SEARCH
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 set ignorecase                    " case-insensitive search ...
@@ -328,7 +361,9 @@ function! s:Cheat(query) abort
   if has('terminal') && executable('cheat') && executable('fzf')
     let l:cmd = empty(a:query) ? ['cheat'] : ['cheat', a:query]
     botright split
-    call term_start(l:cmd, #{curwin: v:true})
+    " term_finish=close: when fzf exits -- whether you pick a line or press
+    " <Esc> to abort -- the job ends and this terminal window closes itself.
+    call term_start(l:cmd, #{curwin: v:true, term_finish: 'close'})
     return
   endif
   call s:CheatBuffer(l:f, a:query)
@@ -348,7 +383,9 @@ function! s:CheatBuffer(file, query) abort
   call setline(1, l:lines)
   call cursor(1, 1)
   setlocal nomodifiable
+  " Close the cheatsheet window with either q or <Esc>.
   nnoremap <buffer> <silent> q :close<CR>
+  nnoremap <buffer> <silent> <Esc> :close<CR>
 endfunction
 
 

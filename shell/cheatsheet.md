@@ -56,13 +56,57 @@ Ctrl-x Ctrl-l       whole-line completion
 Ctrl-x Ctrl-]       tag completion
 Ctrl-x Ctrl-n       keyword completion (current file only)
 
-## Vim :: file tree (netrw)
-\e                  toggle the left-hand file tree   (custom map: :Lexplore)
-Enter               open file / expand dir (in netrw)
--                   go up a directory (in netrw)
-%                   create a new file (in netrw)
-d                   create a new directory (in netrw)
-D                   delete file/dir under cursor (in netrw)
+## Vim :: file tree  --  \e is global; [netrw] maps work only inside the netrw window (:help netrw-browse-maps)
+\e                  toggle the netrw file tree        (custom map: :Lexplore)
+[netrw] <F1>        open netrw's own help
+[netrw] Enter       enter the directory / open the file under cursor
+[netrw] o           open entry under cursor in a new horizontal split
+[netrw] v           open entry under cursor in a new vertical split
+[netrw] t           open entry under cursor in a new tab
+[netrw] p           preview the file (focus stays in the tree)
+[netrw] P           open in the previously used window
+[netrw] O           obtain (fetch/copy) the file under cursor
+[netrw] x           view file with its associated program (open externally)
+[netrw] X           execute the file under cursor via system()
+[netrw] -           go up one directory
+[netrw] gn          make the directory below the cursor the top of the tree
+[netrw] gd / gf     force treatment of the entry as a directory / a file
+[netrw] u / U       change to the previously- / subsequently-visited dir
+[netrw] cd          make the browsing directory Vim's current dir (cwd)
+[netrw] C           set which window netrw edits files into
+[netrw] %           open / create a new file in the current directory
+[netrw] d           make a directory
+[netrw] D           delete (attempt to remove) the file(s)/dir(s)
+[netrw] <del>       delete the file/directory under cursor
+[netrw] R           rename the designated file(s)/dir(s)
+[netrw] gp          change local-only file permissions
+[netrw] a           cycle normal / hide-matching / show-only-matching display
+[netrw] gh          quick toggle of dot-file (hidden) display
+[netrw] <c-h>       edit the hiding list (g:netrw_list_hide)
+[netrw] i           cycle list style (thin / long / wide / tree)
+[netrw] I           toggle the top banner
+[netrw] s / S       select sort (name/time/size) / set suffix sort priority
+[netrw] r           reverse the sorting order
+[netrw] <c-l>       refresh the directory listing
+[netrw] <c-tab>     shrink / expand the netrw window
+[netrw] mb / gb     bookmark current dir / go to previous bookmark
+[netrw] qb          list bookmarked directories and history
+[netrw] mf / mF     mark a file / unmark files
+[netrw] mr          mark files matching a shell-style regexp
+[netrw] mu          unmark all marked files
+[netrw] mt          make the current browsing dir the marked-file target
+[netrw] mc / mm     copy / move marked files to the target dir
+[netrw] md          diff the marked files (up to 3)
+[netrw] me          put marked files on the arg list and edit them
+[netrw] mg          apply :vimgrep to the marked files
+[netrw] mp          print the marked files
+[netrw] mv / mx     run an arbitrary vim / shell command on each marked file
+[netrw] mX          run one shell command on all marked files en bloc
+[netrw] mT          apply ctags to the marked files
+[netrw] mz          compress / decompress the marked files
+[netrw] mh          toggle marked files' suffixes on the hiding list
+[netrw] qf          display information on the file under cursor
+[netrw] qF / qL     mark files using a quickfix / location list
 
 ## Vim :: buffers, marks, folds, misc
 :bnext / :bn        next buffer              (:bprev / :bp = previous)
