@@ -74,6 +74,27 @@ _exit_code() {
   [ "${_ec:-0}" -ne 0 ] && printf ' \001\033[31m\002[%s]\001\033[0m\002' "$_ec"
 }
 
+# Path segment palette — swap the uncommented line to change theme:
+_path_colors=(63 69 99 105 111 117 153)    # Periwinkle Dusk
+#_path_colors=(132 168 174 211 217 218 225) # Warm Rose
+_path_prompt() {
+  local nc=${#_path_colors[@]} dim='\001\033[38;5;244m\002' rst='\001\033[0m\002'
+  local p="${PWD/#$HOME/\~}" prefix=''
+  if [[ $p == '~' ]]; then printf '%b~%b' "$dim" "$rst"; return; fi
+  if   [[ $p == '~/'* ]]; then prefix='~'; p="${p:2}"
+  elif [[ $p ==  '/'* ]]; then prefix='';  p="${p:1}"
+  fi
+  [[ -n $prefix ]] && printf '%b%s' "$dim" "$prefix"
+  IFS='/' read -ra _pp <<< "$p"
+  local i=0
+  for part in "${_pp[@]}"; do
+    [[ -z $part ]] && continue
+    printf '%b/%b%s' "$dim" "\001\033[38;5;${_path_colors[$((i % nc))]}m\002" "$part"
+    (( i++ ))
+  done
+  printf '%b' "$rst"
+}
+
 # Context color for user@host (computed once -- doesn't change within a session):
 #   pastel purple (256-color 183) local non-root; magenta root; red SSH
 #   (+[client-ip]); yellow [docker]
@@ -88,9 +109,15 @@ elif [ -r /etc/debian_chroot ]; then
 fi
 [ "$(id -u)" = 0 ] && _ctx_color='35'
 
-# user@host (context color), \w cwd (yellow), git segment, red [N] on failure,
-# then \$ ('#' as root else plain '$').
-PS1="${_ctx_prefix}\[\e[${_ctx_color}m\]\u@\h\[\e[0m\]:\[\e[36m\]\w\[\e[0m\]"'$(_git_prompt)$(_exit_code) \$ '
+# Show user@host (\u@\h) only when remote (SSH); skip it on local sessions.
+# To always show it, comment out the guard below and uncomment the line after.
+_host_seg=''
+[ -n "$SSH_CONNECTION" ] && _host_seg="\[\e[${_ctx_color}m\]\u@\h\[\e[0m\]:"
+# _host_seg="\[\e[${_ctx_color}m\]\u@\h\[\e[0m\]:"
+
+# cwd (per-segment color via _path_prompt); git segment; red [N] on failure;
+# \$ -> '#' as root else plain '$'.
+PS1="${_ctx_prefix}${_host_seg}"'$(_path_prompt)$(_git_prompt)$(_exit_code) \$ '
 
 # --- fzf integration (only when the opt-in layer is installed) ----------------
 # Adds fzf to PATH plus Ctrl-R / Ctrl-T / Alt-C widgets and completion.

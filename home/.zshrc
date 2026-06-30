@@ -108,6 +108,26 @@ _git_prompt() {
   print -n -- " ${color}(${branch}${marks})%f"
 }
 
+# Path segment palette — swap the uncommented line to change theme:
+_path_colors=(63 69 99 105 111 117 153)    # Periwinkle Dusk
+#_path_colors=(132 168 174 211 217 218 225) # Warm Rose
+_path_prompt() {
+  local colors=($_path_colors) dim=244
+  local p="${PWD/#$HOME/~}" prefix=''
+  if [[ $p == '~' ]]; then print -n -- "%F{${dim}}~%f"; return; fi
+  if   [[ $p == '~/'* ]]; then prefix='~'; p="${p:2}"
+  elif [[ $p ==  '/'* ]]; then prefix='';  p="${p:1}"
+  fi
+  local parts=("${(@s:/:)p}") i=1
+  [[ -n $prefix ]] && print -n -- "%F{${dim}}${prefix}"
+  for part in $parts; do
+    [[ -z $part ]] && continue
+    print -n -- "%F{${dim}}/%F{${colors[$(( (i-1) % ${#colors} + 1 ))]}}${part}"
+    (( i++ ))
+  done
+  print -n -- '%f'
+}
+
 # Context color for user@host (computed once -- doesn't change within a session):
 #   183     local non-root (pastel purple, distinct from the green clean-git)
 #   magenta root
@@ -124,10 +144,16 @@ elif [[ -r /etc/debian_chroot ]]; then
 fi
 [[ $UID == 0 ]] && _ctx_color=magenta
 
-# %n user, %m short hostname, %~ cwd (yellow); the git segment; then a red [N]
-# only when the last command failed; %(!.#.$) -> '#' as root else plain '$'.
-PROMPT="${_ctx_prefix}%F{${_ctx_color}}%n@%m%f:%F{cyan}%~%f"'$(_git_prompt)%(?.. %F{red}[%?]%f) %(!.#.$) '
-unset _ctx_color _ctx_prefix
+# Show user@host (%n@%m) only when remote (SSH); skip it on local sessions.
+# To always show it, comment out the guard below and uncomment the line after.
+_host_seg=''
+[[ -n $SSH_CONNECTION ]] && _host_seg="%F{${_ctx_color}}%n@%m%f:"
+# _host_seg="%F{${_ctx_color}}%n@%m%f:"
+
+# cwd (per-segment color via _path_prompt); git segment; red [N] on failure;
+# %(!.#.$) -> '#' as root else plain '$'.
+PROMPT="${_ctx_prefix}${_host_seg}"'$(_path_prompt)$(_git_prompt)%(?.. %F{red}[%?]%f) %(!.#.$) '
+unset _ctx_color _ctx_prefix _host_seg
 
 # --- fzf integration (only when the opt-in layer is installed) ----------------
 # Sourced last so fzf's Ctrl-R (fuzzy history) takes over from the builtin one

@@ -92,6 +92,15 @@ if 1
 
   augroup END
 
+  " BufWinEnter fires after filetype/syntax are loaded, so this reliably wins.
+  augroup LargeFile
+    autocmd!
+    autocmd BufWinEnter *
+          \ if getfsize(expand('<afile>')) > 512*1024 |
+          \   setlocal syntax= |
+          \ endif
+  augroup END
+
   " Quite a few people accidentally type "q:" instead of ":q" and get confused
   " by the command line window.  Give a hint about how to get out.
   " If you don't like this you can put this in your vimrc:
@@ -165,6 +174,8 @@ endif
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " GENERAL UX
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+set synmaxcol=200                 " don't syntax-highlight past column 200 (perf)
+set redrawtime=10000              " raise timeout before syntax gives up (default 2000ms)
 set number                        " absolute line numbers
 set norelativenumber              " no relative numbers (':set rnu' to toggle on)
 set hidden                        " switch buffers without saving
@@ -302,6 +313,8 @@ augroup ftPrefs
         \ setlocal tabstop=4 shiftwidth=4 expandtab
   " Makefiles need real tabs.
   autocmd FileType make setlocal noexpandtab
+  " TS regex syntax is very slow; JS syntax gives useful highlighting at low cost.
+  autocmd FileType typescript,typescriptreact setlocal syntax=javascript
   " Give every buffer a working omnifunc when nothing else set one.
   autocmd FileType *
         \ if &omnifunc ==# '' |
